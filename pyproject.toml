@@ -9,7 +9,7 @@ description = "Simple Exploratory Data Analysis tool: column profiling, correlat
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-authors = [{ name = "se-dat contributors" }]
+authors = [{ name = "Haim Feldman", email = "haimfeld@gmail.com" }]
 keywords = ["eda", "data-analysis", "pandas", "correlation", "encoding"]
 classifiers = [
     "Programming Language :: Python :: 3",
