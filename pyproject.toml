@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "se-dat"
-version = "0.1.0"
+version = "0.1.1"
 description = "Simple Exploratory Data Analysis tool: column profiling, correlation analysis, and encoding suggestions."
 readme = "README.md"
 requires-python = ">=3.9"

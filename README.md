@@ -7,6 +7,12 @@ move from raw data to a model-ready frame in one call.
 ## Install
 
 ```bash
+pip install se-dat
+```
+
+For local development:
+
+```bash
 pip install -e .
 ```
 
