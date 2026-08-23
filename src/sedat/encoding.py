@@ -38,6 +38,11 @@ class EncodingSuggestion:
     rationale: str
     categories: list[str] = field(default_factory=list)
     target_means: dict[str, float] = field(default_factory=dict)
+    # Fitted artifact: explicit {value: code} map captured when the plan was
+    # built. When present, ``apply`` reuses it instead of re-deriving codes
+    # from the data, so a plan saved on a training frame and re-applied to a
+    # test frame produces identical encodings.
+    mapping: dict[str, int] | None = None
 
     def apply(self, df: pd.DataFrame, target: pd.Series | None = None) -> pd.DataFrame:
         out = df.copy()
@@ -47,18 +52,27 @@ class EncodingSuggestion:
         if self.strategy == NONE_STRATEGY:
             return out
         if self.strategy == BINARY_STRATEGY:
-            mapping = binary_mapping(out[col])
+            mapping = self.mapping or binary_mapping(out[col])
             if mapping is None:
                 ordered = sorted(out[col].dropna().unique())
                 mapping = {v: i for i, v in enumerate(ordered)}
             out[col] = out[col].astype(str).str.strip().str.lower().map(mapping)
         elif self.strategy == ONE_HOT_STRATEGY:
             dummies = pd.get_dummies(out[col], prefix=col, dtype=int)
+            if self.categories:
+                # align to the categories seen at suggest time so the output
+                # schema is stable across frames (unseen values -> all zeros)
+                expected = [f"{col}_{c}" for c in self.categories]
+                dummies = dummies.reindex(columns=expected, fill_value=0)
             out = out.drop(columns=[col])
             out = pd.concat([out, dummies], axis=1)
         elif self.strategy == ORDINAL_STRATEGY:
-            ordered = sorted(out[col].dropna().astype(str).unique())
-            out[col] = out[col].astype(str).map({v: i for i, v in enumerate(ordered)})
+            if self.mapping is not None:
+                mapping = self.mapping
+            else:
+                ordered = sorted(out[col].dropna().astype(str).unique())
+                mapping = {v: i for i, v in enumerate(ordered)}
+            out[col] = out[col].astype(str).map(mapping)
         elif self.strategy == TARGET_STRATEGY:
             if target is not None:
                 means = target.groupby(out[col].astype(str)).transform("mean")
@@ -98,6 +112,17 @@ class EncodingPlan:
         for suggestion in self.suggestions:
             result = suggestion.apply(result, target=tgt)
         return result
+
+    def to_column_transformer(self):
+        """Return an sklearn ``ColumnTransformer`` mirroring this plan.
+
+        Requires the optional ``sklearn`` extra (``pip install se-dat[sklearn]``).
+        The transformer is ready to fit: ``transformer.fit(X, y)`` — pass ``y``
+        when the plan includes target-encoding suggestions.
+        """
+        from .sklearn_compat import encoding_plan_to_column_transformer
+
+        return encoding_plan_to_column_transformer(self)
 
     def __repr__(self) -> str:
         return repr(self.summary)
@@ -147,6 +172,7 @@ def suggest_encodings(
                         cardinality=cardinality,
                         rationale="binary-like strings map cleanly to 0/1",
                         categories=sorted(series.dropna().unique().tolist()),
+                        mapping=binary_mapping(series),
                     )
                 )
             continue
@@ -167,6 +193,11 @@ def suggest_encodings(
                     cardinality=cardinality,
                     rationale="two distinct values: binary encode",
                     categories=sorted(series.dropna().unique().tolist()),
+                    mapping=binary_mapping(series)
+                    or {
+                        v: i
+                        for i, v in enumerate(sorted(series.dropna().astype(str).unique()))
+                    },
                 )
             )
         elif cardinality <= cardinality_threshold:
@@ -219,6 +250,12 @@ def suggest_encodings(
                             "one-hot would explode dimensionality"
                         ),
                         categories=sorted(series.dropna().astype(str).unique().tolist()),
+                        mapping={
+                            v: i
+                            for i, v in enumerate(
+                                sorted(series.dropna().astype(str).unique())
+                            )
+                        },
                     )
                 )
 

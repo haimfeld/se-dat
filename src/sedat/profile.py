@@ -8,6 +8,7 @@ inference is ambiguous.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Hashable
 
 import pandas as pd
 
@@ -34,6 +35,7 @@ class ColumnProfile:
 @dataclass
 class DataFrameProfile:
     columns: list[ColumnProfile]
+    outlier_notes: dict[Hashable, str] = field(default_factory=dict)
 
     @property
     def summary(self) -> pd.DataFrame:
@@ -46,6 +48,7 @@ class DataFrameProfile:
                 "n_unique": c.n_unique,
                 "cardinality_ratio": c.cardinality_ratio,
                 "confidence": c.confidence,
+                "outliers": self.outlier_notes.get(c.name, ""),
                 "notes": "; ".join(c.notes),
             }
             for c in self.columns

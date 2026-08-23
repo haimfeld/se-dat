@@ -22,7 +22,26 @@ from .encoding import (
     apply_encodings,
     suggest_encodings,
 )
+from .datetime_features import (
+    DatetimeFeaturePlan,
+    DatetimeFeatureSuggestion,
+    apply_datetime_features,
+    suggest_datetime_features,
+)
+from .imputation import (
+    ImputationPlan,
+    ImputationSuggestion,
+    apply_imputations,
+    suggest_imputations,
+)
+from .outliers import (
+    ColumnOutliers,
+    OutlierReport,
+    detect_outliers,
+    outlier_note,
+)
 from .profile import ColumnProfile, DataFrameProfile, profile_column, profile_dataframe
+from .persistence import load_plan, save_plan
 from .report import EDAReport
 from .types import infer_column_type, is_binary_like
 
@@ -32,20 +51,34 @@ __all__ = [
     "ColumnProfile",
     "CorrelationReport",
     "DataFrameProfile",
+    "DatetimeFeaturePlan",
+    "DatetimeFeatureSuggestion",
     "EDAReport",
     "EncodingPlan",
     "EncodingSuggestion",
+    "ImputationPlan",
+    "ImputationSuggestion",
+    "OutlierReport",
+    "ColumnOutliers",
     "apply_encodings",
+    "apply_imputations",
+    "apply_datetime_features",
     "categorical_correlation",
     "correlation_heatmap",
     "correlation_ratio",
     "correlation_report",
     "cramers_v",
+    "detect_outliers",
     "infer_column_type",
     "is_binary_like",
+    "load_plan",
     "numeric_categorical_correlation",
     "numeric_correlation",
+    "outlier_note",
     "profile_column",
     "profile_dataframe",
+    "save_plan",
+    "suggest_datetime_features",
     "suggest_encodings",
+    "suggest_imputations",
 ]
