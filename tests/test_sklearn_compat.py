@@ -54,9 +54,7 @@ def test_fit_transform_output_matches_pandas_apply(plan_with_target):
     out = pd.DataFrame(Xt, columns=ct.get_feature_names_out())
     # passthrough text columns make the assembled array object dtype,
     # so compare values rather than dtypes
-    pd.testing.assert_series_equal(
-        out["smoker"].astype(int), expected["smoker"], check_names=False
-    )
+    pd.testing.assert_series_equal(out["smoker"].astype(int), expected["smoker"], check_names=False)
     pd.testing.assert_frame_equal(
         out[["age", "fare"]].astype(float),
         expected[["age", "fare"]],
@@ -91,7 +89,7 @@ def test_passthrough_only_when_no_suggestions():
 
 
 def test_works_without_any_target(plan_with_target):
-    plan, df = plan_with_target
+    _, df = plan_with_target
     plain = sedat.suggest_encodings(df)  # no target -> ordinal fallback for sku
     ct = plain.to_column_transformer()
     Xt = ct.fit_transform(df.drop(columns=["target"]))

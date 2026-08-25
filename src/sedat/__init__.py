@@ -16,17 +16,17 @@ from .correlations import (
     numeric_categorical_correlation,
     numeric_correlation,
 )
-from .encoding import (
-    EncodingPlan,
-    EncodingSuggestion,
-    apply_encodings,
-    suggest_encodings,
-)
 from .datetime_features import (
     DatetimeFeaturePlan,
     DatetimeFeatureSuggestion,
     apply_datetime_features,
     suggest_datetime_features,
+)
+from .encoding import (
+    EncodingPlan,
+    EncodingSuggestion,
+    apply_encodings,
+    suggest_encodings,
 )
 from .imputation import (
     ImputationPlan,
@@ -40,14 +40,15 @@ from .outliers import (
     detect_outliers,
     outlier_note,
 )
-from .profile import ColumnProfile, DataFrameProfile, profile_column, profile_dataframe
 from .persistence import load_plan, save_plan
+from .profile import ColumnProfile, DataFrameProfile, profile_column, profile_dataframe
 from .report import EDAReport
 from .types import infer_column_type, is_binary_like
 
 __version__ = "0.1.0"
 
 __all__ = [
+    "ColumnOutliers",
     "ColumnProfile",
     "CorrelationReport",
     "DataFrameProfile",
@@ -59,10 +60,9 @@ __all__ = [
     "ImputationPlan",
     "ImputationSuggestion",
     "OutlierReport",
-    "ColumnOutliers",
+    "apply_datetime_features",
     "apply_encodings",
     "apply_imputations",
-    "apply_datetime_features",
     "categorical_correlation",
     "correlation_heatmap",
     "correlation_ratio",

@@ -81,9 +81,7 @@ class ImputationPlan:
         """Return the suggestion for ``column``, or None if it has no missings."""
         return next((s for s in self.suggestions if s.column == column), None)
 
-    def apply(
-        self, df: pd.DataFrame, column: str | None = None
-    ) -> pd.DataFrame:
+    def apply(self, df: pd.DataFrame, column: str | None = None) -> pd.DataFrame:
         """Apply one column's suggestion, or every suggestion when ``column`` is None."""
         result = df.copy()
         if column is not None:
@@ -156,10 +154,7 @@ def suggest_imputations(
                     n_missing=n_missing,
                     missing_pct=pct,
                     fill_value=float(series.median()),
-                    rationale=(
-                        "numeric column: median is robust to outliers "
-                        "(mean is a reasonable alternative)"
-                    ),
+                    rationale=("numeric column: median is robust to outliers (mean is a reasonable alternative)"),
                 )
             )
         else:
@@ -171,15 +166,11 @@ def suggest_imputations(
                     n_missing=n_missing,
                     missing_pct=pct,
                     fill_value=_mode_value(series),
-                    rationale=(
-                        f"{col_type} column: fill with the most frequent value"
-                    ),
+                    rationale=(f"{col_type} column: fill with the most frequent value"),
                 )
             )
 
-    return ImputationPlan(
-        suggestions=suggestions, missing_threshold=missing_threshold
-    )
+    return ImputationPlan(suggestions=suggestions, missing_threshold=missing_threshold)
 
 
 def apply_imputations(

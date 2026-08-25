@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7", "pytest-cov"]
+dev = ["pytest>=7", "pytest-cov", "pre-commit", "ruff", "isort"]
 sklearn = ["scikit-learn>=1.3"]
 
 [tool.setuptools.packages.find]
@@ -37,3 +37,15 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.isort]
+profile = "black"
+known_first_party = ["sedat"]

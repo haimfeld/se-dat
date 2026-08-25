@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-import numpy as np
 import pandas as pd
 
 from .profile import profile_dataframe
@@ -194,10 +193,7 @@ def suggest_encodings(
                     rationale="two distinct values: binary encode",
                     categories=sorted(series.dropna().unique().tolist()),
                     mapping=binary_mapping(series)
-                    or {
-                        v: i
-                        for i, v in enumerate(sorted(series.dropna().astype(str).unique()))
-                    },
+                    or {v: i for i, v in enumerate(sorted(series.dropna().astype(str).unique()))},
                 )
             )
         elif cardinality <= cardinality_threshold:
@@ -222,14 +218,10 @@ def suggest_encodings(
                         strategy=TARGET_STRATEGY,
                         cardinality=cardinality,
                         rationale=(
-                            f"high-cardinality categorical (k={cardinality}): "
-                            "one-hot would explode dimensionality"
+                            f"high-cardinality categorical (k={cardinality}): one-hot would explode dimensionality"
                         ),
                         categories=sorted(series.dropna().unique().tolist()),
-                        target_means={
-                            str(k): float(v)
-                            for k, v in target.groupby(series.astype(str)).mean().items()
-                        },
+                        target_means={str(k): float(v) for k, v in target.groupby(series.astype(str)).mean().items()},
                     )
                 )
             else:
@@ -246,16 +238,10 @@ def suggest_encodings(
                         strategy=ORDINAL_STRATEGY,
                         cardinality=cardinality,
                         rationale=(
-                            f"high-cardinality categorical (k={cardinality}): "
-                            "one-hot would explode dimensionality"
+                            f"high-cardinality categorical (k={cardinality}): one-hot would explode dimensionality"
                         ),
                         categories=sorted(series.dropna().astype(str).unique().tolist()),
-                        mapping={
-                            v: i
-                            for i, v in enumerate(
-                                sorted(series.dropna().astype(str).unique())
-                            )
-                        },
+                        mapping={v: i for i, v in enumerate(sorted(series.dropna().astype(str).unique()))},
                     )
                 )
 

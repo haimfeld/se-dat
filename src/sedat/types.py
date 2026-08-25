@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import numpy as np
 import pandas as pd
 
 BINARY_VALUE_SETS: dict[str, set[str]] = {
@@ -109,10 +108,7 @@ def infer_column_type(series: pd.Series) -> dict[str, Any]:
             inferred_type = "boolean"
             confidence = "medium"
             notes.append("numeric 0/1 column: ambiguous boolean vs numeric")
-        elif (
-            pd.api.types.is_integer_dtype(series.dtype)
-            and stats["cardinality_ratio"] >= 0.95
-        ):
+        elif pd.api.types.is_integer_dtype(series.dtype) and stats["cardinality_ratio"] >= 0.95:
             inferred_type = "id"
             notes.append("high-cardinality unique integer values")
         else:

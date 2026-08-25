@@ -114,7 +114,7 @@ def test_imputation_round_trip_uses_train_statistics(tmp_path):
 
     test = pd.DataFrame(
         {
-            "num": [np.nan, 100.0],   # train median is 2.0, NOT test median
+            "num": [np.nan, 100.0],  # train median is 2.0, NOT test median
             "cat": [None, None],
             "gone": [None, None],
         }
@@ -126,9 +126,7 @@ def test_imputation_round_trip_uses_train_statistics(tmp_path):
 
 
 def test_datetime_feature_plan_round_trip(tmp_path):
-    train = pd.DataFrame(
-        {"ts": pd.to_datetime(["2024-01-06 08:30:00", "2024-01-08 22:15:00"])}
-    )
+    train = pd.DataFrame({"ts": pd.to_datetime(["2024-01-06 08:30:00", "2024-01-08 22:15:00"])})
     plan = sedat.suggest_datetime_features(train)
     loaded = DatetimeFeaturePlan.load(str(plan.save(str(tmp_path / "dt.json"))))
 
@@ -143,9 +141,7 @@ def test_datetime_feature_plan_round_trip(tmp_path):
 def test_load_rejects_wrong_plan_type(tmp_path):
     df = pd.DataFrame({"a": ["x", "y", "x", "x", "y", "y"]})
     enc_path = sedat.suggest_encodings(df).save(str(tmp_path / "e.json"))
-    imp_path = sedat.suggest_imputations(
-        pd.DataFrame({"a": [1.0, np.nan]})
-    ).save(str(tmp_path / "i.json"))
+    imp_path = sedat.suggest_imputations(pd.DataFrame({"a": [1.0, np.nan]})).save(str(tmp_path / "i.json"))
 
     with pytest.raises(TypeError, match="ImputationPlan"):
         ImputationPlan.load(enc_path)

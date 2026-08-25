@@ -10,8 +10,8 @@ multicollinearity.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Iterator
 
 import numpy as np
 import pandas as pd
@@ -33,7 +33,7 @@ def _categorical_df(df: pd.DataFrame) -> pd.DataFrame:
         if (
             pd.api.types.is_bool_dtype(dtype)
             or isinstance(dtype, pd.CategoricalDtype)
-            or dtype == object
+            or dtype is object
             or isinstance(dtype, pd.StringDtype)
         ):
             picked.append(col)
@@ -200,11 +200,7 @@ def correlation_report(
 
 
 def _binary_numeric_map(df: pd.DataFrame) -> dict[str, dict[str, int]]:
-    return {
-        col: mapping
-        for col in df.columns
-        if (mapping := binary_mapping(df[col])) is not None
-    }
+    return {col: mapping for col in df.columns if (mapping := binary_mapping(df[col])) is not None}
 
 
 def encode_binary_columns(df: pd.DataFrame) -> pd.DataFrame:

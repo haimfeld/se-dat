@@ -20,8 +20,7 @@ def make_df():
         {
             "clean": list(range(1, 21)),
             "spiky": [float(x) for x in range(1, 20)] + [1000.0],
-            "with_nan": [1.0, 2.0, 3.0, np.nan, 5.0, np.nan, 6.0, 7.0]
-            + [1.5, 2.5] * 5 + [9.0, 10.0],
+            "with_nan": [1.0, 2.0, 3.0, np.nan, 5.0, np.nan, 6.0, 7.0] + [1.5, 2.5] * 5 + [9.0, 10.0],
             "constant": [7.0] * 20,
             "text": ["a"] * 20,
         }
@@ -34,7 +33,7 @@ def test_iqr_flags_planted_extreme_value():
     assert spiky.count == 1
     assert spiky.indices == [19]
     assert spiky.pct == pytest.approx(100 / 20, abs=0.01)
-    assert spiky.upper is not None and 1000.0 > spiky.upper
+    assert spiky.upper is not None and spiky.upper < 1000.0
 
 
 def test_zscore_flags_planted_extreme_value():
@@ -65,9 +64,7 @@ def test_nan_values_never_flagged_or_counted():
 
 
 def test_indices_are_dataframe_labels_not_positions():
-    df = pd.DataFrame(
-        {"x": [1.0] * 9 + [999.0]}, index=[f"row{i}" for i in range(10)]
-    )
+    df = pd.DataFrame({"x": [1.0] * 9 + [999.0]}, index=[f"row{i}" for i in range(10)])
     report = detect_outliers(df)
     assert report.indices("x") == ["row9"]
 
@@ -78,7 +75,7 @@ def test_invalid_method_raises():
 
 
 def test_custom_thresholds_change_results():
-    base = pd.DataFrame({"x": list(range(100)) + [10_000]})
+    base = pd.DataFrame({"x": [*list(range(100)), 10_000]})
     tight = detect_outliers(base, iqr_scale=0.5)
     wide = detect_outliers(base, iqr_scale=3.0)
     assert tight.get("x").count >= wide.get("x").count
