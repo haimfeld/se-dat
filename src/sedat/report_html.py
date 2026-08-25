@@ -76,7 +76,7 @@ def _section(title: str, body: str) -> str:
     return f"<section><h2>{_escape(title)}</h2>{body}</section>"
 
 
-def render_html(report: "EDAReport") -> str:
+def render_html(report: EDAReport) -> str:
     """Render ``report`` to a complete standalone HTML document string."""
     from . import __version__
 
@@ -111,13 +111,11 @@ def render_html(report: "EDAReport") -> str:
         "<!DOCTYPE html>\n"
         '<html lang="en">\n<head>\n<meta charset="utf-8"/>\n'
         f"<title>{title}</title>\n<style>{_CSS}</style>\n</head>\n<body>\n"
-        f"<h1>se-dat EDA report</h1>\n{meta}\n"
-        + "\n".join(sections)
-        + "\n</body>\n</html>\n"
+        f"<h1>se-dat EDA report</h1>\n{meta}\n" + "\n".join(sections) + "\n</body>\n</html>\n"
     )
 
 
-def write_html(report: "EDAReport", path: str) -> str:
+def write_html(report: EDAReport, path: str) -> str:
     """Render ``report`` and write it to ``path``; returns the path."""
     content = render_html(report)
     with open(path, "w", encoding="utf-8") as fh:

@@ -28,7 +28,7 @@ IS_WEEKEND = "is_weekend"
 HOUR = "hour"
 
 BASE_FEATURES: tuple[str, ...] = (YEAR, MONTH, DAY, DAY_OF_WEEK, IS_WEEKEND)
-ALL_FEATURES: tuple[str, ...] = BASE_FEATURES + (HOUR,)
+ALL_FEATURES: tuple[str, ...] = (*BASE_FEATURES, HOUR)
 
 FEATURE_SUFFIXES: dict[str, str] = {
     YEAR: "_year",
@@ -105,9 +105,7 @@ class DatetimeFeaturePlan:
         if column is not None:
             suggestion = self.get(column)
             if suggestion is None:
-                raise KeyError(
-                    f"No datetime feature suggestion for column '{column}'"
-                )
+                raise KeyError(f"No datetime feature suggestion for column '{column}'")
             return suggestion.apply(result)
         for suggestion in self.suggestions:
             result = suggestion.apply(result)
@@ -124,12 +122,7 @@ def _has_time_component(parsed: pd.Series) -> bool:
     valid = parsed.dropna()
     if valid.empty:
         return False
-    return bool(
-        (valid.dt.hour != 0).any()
-        or (valid.dt.minute != 0)
-        .any()
-        or (valid.dt.second != 0).any()
-    )
+    return bool((valid.dt.hour != 0).any() or (valid.dt.minute != 0).any() or (valid.dt.second != 0).any())
 
 
 def suggest_datetime_features(df: pd.DataFrame) -> DatetimeFeaturePlan:

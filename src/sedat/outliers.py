@@ -12,8 +12,9 @@ from the denominators of the reported percentages.
 
 from __future__ import annotations
 
+from collections.abc import Hashable
 from dataclasses import dataclass, field
-from typing import Any, Hashable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -25,7 +26,7 @@ DEFAULT_IQR_SCALE = 1.5
 DEFAULT_Z_THRESHOLD = 3.0
 
 
-def outlier_note(result: "ColumnOutliers") -> str:
+def outlier_note(result: ColumnOutliers) -> str:
     """One-line human-readable summary, e.g. 'age: 12 potential outliers (2.4%)'."""
     if result.count == 0:
         return ""
@@ -79,9 +80,7 @@ class OutlierReport:
         return repr(self.summary)
 
 
-def _detect_iqr(
-    series: pd.Series, scale: float
-) -> tuple[np.ndarray, float | None, float | None]:
+def _detect_iqr(series: pd.Series, scale: float) -> tuple[np.ndarray, float | None, float | None]:
     q1, q3 = series.quantile([0.25, 0.75])
     iqr = float(q3 - q1)
     lower = float(q1) - scale * iqr
@@ -90,9 +89,7 @@ def _detect_iqr(
     return mask, lower, upper
 
 
-def _detect_zscore(
-    series: pd.Series, threshold: float
-) -> tuple[np.ndarray, float | None, float | None]:
+def _detect_zscore(series: pd.Series, threshold: float) -> tuple[np.ndarray, float | None, float | None]:
     std = float(series.std())
     if std == 0 or np.isnan(std):
         return np.zeros(len(series), dtype=bool), None, None
@@ -124,9 +121,7 @@ def detect_outliers(
     Percentages are computed over non-null values.
     """
     if method not in (IQR_METHOD, ZSCORE_METHOD):
-        raise ValueError(
-            f"Unknown method '{method}'. Expected one of: {IQR_METHOD}, {ZSCORE_METHOD}"
-        )
+        raise ValueError(f"Unknown method '{method}'. Expected one of: {IQR_METHOD}, {ZSCORE_METHOD}")
     num = df.select_dtypes(include=[np.number])
     results: list[ColumnOutliers] = []
     for col in num.columns:

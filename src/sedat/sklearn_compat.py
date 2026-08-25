@@ -18,9 +18,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .encoding import (
-    BINARY_STRATEGY,
     ONE_HOT_STRATEGY,
-    ORDINAL_STRATEGY,
     TARGET_STRATEGY,
 )
 
@@ -38,8 +36,7 @@ def _import_transformers():
         )
     except ImportError as exc:  # pragma: no cover - depends on env
         raise ImportError(
-            "scikit-learn is required for to_column_transformer(). "
-            "Install it with: pip install se-dat[sklearn]"
+            "scikit-learn is required for to_column_transformer(). Install it with: pip install se-dat[sklearn]"
         ) from exc
     return ColumnTransformer, OneHotEncoder, OrdinalEncoder, TargetEncoder
 
@@ -48,7 +45,7 @@ def _sorted_categories(suggestion) -> list[str]:
     return sorted(str(value) for value in suggestion.categories)
 
 
-def encoding_plan_to_column_transformer(plan: "EncodingPlan"):
+def encoding_plan_to_column_transformer(plan: EncodingPlan):
     """Build an sklearn ``ColumnTransformer`` equivalent to ``plan``.
 
     The returned transformer is *ready to fit*: call
@@ -56,9 +53,7 @@ def encoding_plan_to_column_transformer(plan: "EncodingPlan"):
     target-encoding suggestions). Fitted on a training frame and applied to a
     test frame, unseen categories are handled gracefully instead of raising.
     """
-    ColumnTransformer, OneHotEncoder, OrdinalEncoder, TargetEncoder = (
-        _import_transformers()
-    )
+    ColumnTransformer, OneHotEncoder, OrdinalEncoder, TargetEncoder = _import_transformers()
 
     transformers = []
     for suggestion in plan.suggestions:

@@ -67,11 +67,7 @@ def _encoding_plan_to_dict(plan: EncodingPlan) -> dict[str, Any]:
                 "rationale": s.rationale,
                 "categories": [_jsonable(c) for c in s.categories],
                 "target_means": {k: float(v) for k, v in s.target_means.items()},
-                "mapping": (
-                    None
-                    if s.mapping is None
-                    else {_jsonable(k): int(v) for k, v in s.mapping.items()}
-                ),
+                "mapping": (None if s.mapping is None else {_jsonable(k): int(v) for k, v in s.mapping.items()}),
             }
             for s in plan.suggestions
         ],
@@ -89,11 +85,7 @@ def _encoding_plan_from_dict(payload: dict[str, Any]) -> EncodingPlan:
             rationale=s["rationale"],
             categories=list(s.get("categories", [])),
             target_means=dict(s.get("target_means", {})),
-            mapping=(
-                None
-                if s.get("mapping") is None
-                else {str(k): int(v) for k, v in s["mapping"].items()}
-            ),
+            mapping=(None if s.get("mapping") is None else {str(k): int(v) for k, v in s["mapping"].items()}),
         )
         for s in payload.get("suggestions", [])
     ]
@@ -128,10 +120,7 @@ def _imputation_plan_from_dict(payload: dict[str, Any]) -> ImputationPlan:
         fill_value = s.get("fill_value")
         # datetime modes round-trip as ISO strings; restore Timestamps so
         # fillna works on datetime64 columns again
-        if (
-            isinstance(fill_value, str)
-            and s.get("current_type") == "datetime"
-        ):
+        if isinstance(fill_value, str) and s.get("current_type") == "datetime":
             fill_value = pd.Timestamp(fill_value)
         suggestions.append(
             ImputationSuggestion(
@@ -207,14 +196,11 @@ def save_plan(plan, path: str) -> str:
 
 def load_plan(path: str):
     """Deserialize a plan saved by :func:`save_plan`."""
-    with open(path, "r", encoding="utf-8") as fh:
+    with open(path, encoding="utf-8") as fh:
         envelope = json.load(fh)
     plan_type = envelope.get("plan_type")
     if plan_type not in _SERIALIZERS:
-        raise ValueError(
-            f"Unknown plan type '{plan_type}'. Expected one of: "
-            f"{sorted(_SERIALIZERS)}"
-        )
+        raise ValueError(f"Unknown plan type '{plan_type}'. Expected one of: {sorted(_SERIALIZERS)}")
     _, from_dict = _SERIALIZERS[plan_type]
     return from_dict(envelope.get("payload", {}))
 
@@ -223,12 +209,10 @@ def _make_save_load(cls):
     def save(self, path: os.PathLike | str) -> str:
         return save_plan(self, path)
 
-    def load(cls_, path: os.PathLike | str):  # noqa: N805 - classmethod
+    def load(cls_, path: os.PathLike | str):
         plan = load_plan(path)
         if not isinstance(plan, cls_):
-            raise TypeError(
-                f"File contains a {type(plan).__name__}, expected {cls_.__name__}"
-            )
+            raise TypeError(f"File contains a {type(plan).__name__}, expected {cls_.__name__}")
         return plan
 
     save.__name__ = "save"

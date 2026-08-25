@@ -19,8 +19,7 @@ def make_df(n=1000, seed=0):
             "flag01": rng.integers(0, 2, n),
             "score_cat": rng.choice(["low", "med", "high"], n),
             "free_text": [f"user comment number {i}" for i in range(n)],
-            "joined": pd.to_datetime("2020-01-01")
-            + pd.to_timedelta(rng.integers(0, 365 * 5, n), unit="D"),
+            "joined": pd.to_datetime("2020-01-01") + pd.to_timedelta(rng.integers(0, 365 * 5, n), unit="D"),
             "large_card": rng.choice([f"sku_{i}" for i in range(50)], n),
             "target": rng.normal(0, 1, n),
         }

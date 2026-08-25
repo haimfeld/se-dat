@@ -1,6 +1,5 @@
 """Tests for datetime feature extraction (sedat.datetime_features)."""
 
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -15,9 +14,7 @@ from sedat.datetime_features import (
 
 
 def test_date_only_column_gets_five_features():
-    df = pd.DataFrame(
-        {"when": ["2024-01-06", "2024-01-08", "2024-03-15", None]}
-    )
+    df = pd.DataFrame({"when": ["2024-01-06", "2024-01-08", "2024-03-15", None]})
     plan = suggest_datetime_features(df)
     assert plan.get("when").features == list(BASE_FEATURES)
     assert not plan.get("when").has_time_component
@@ -39,11 +36,7 @@ def test_weekday_and_weekend_values():
 
 
 def test_time_component_adds_hour():
-    df = pd.DataFrame(
-        {"ts": pd.to_datetime(
-            ["2024-01-01 08:30:00", "2024-06-15 23:05:00"]
-        )}
-    )
+    df = pd.DataFrame({"ts": pd.to_datetime(["2024-01-01 08:30:00", "2024-06-15 23:05:00"])})
     plan = suggest_datetime_features(df)
     assert plan.get("ts").has_time_component
     assert plan.get("ts").features == list(ALL_FEATURES)

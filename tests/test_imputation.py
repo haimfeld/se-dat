@@ -125,9 +125,7 @@ def test_empty_plan_when_no_missing():
 def test_shortcut_function_matches_plan():
     df = make_df()
     plan = suggest_imputations(df)
-    pd.testing.assert_frame_equal(
-        sedat.apply_imputations(df), plan.apply_all(df)
-    )
+    pd.testing.assert_frame_equal(sedat.apply_imputations(df), plan.apply_all(df))
 
 
 def test_report_wiring():
@@ -167,11 +165,7 @@ def test_suggestion_for_missing_column_is_noop():
 
 
 def test_datetime_column_gets_mode():
-    df = pd.DataFrame(
-        {
-            "when": pd.to_datetime(["2021-01-01", None, "2021-03-05", "2021-03-05"])
-        }
-    )
+    df = pd.DataFrame({"when": pd.to_datetime(["2021-01-01", None, "2021-03-05", "2021-03-05"])})
     plan = suggest_imputations(df)
     when = plan.get("when")
     assert when.strategy == MODE_STRATEGY

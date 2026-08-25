@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Pre-commit hooks**: added `.pre-commit-config.yaml` with trailing-whitespace,
+  end-of-file-fixer, check-yaml, check-toml, check-added-large-files,
+  isort (black profile), ruff linter (`--fix`) and ruff formatter.
+  Ruff config added to `pyproject.toml` targeting Python 3.9+ with rules
+  E, F, UP, B, SIM, RUF.
 - **Testing & CI**: pytest suite covering type-inference edge cases (all-null
   columns, single-unique values, numeric-looking strings, binary-like strings,
   high-cardinality text, datetime formats, mixed-type columns); GitHub Actions
