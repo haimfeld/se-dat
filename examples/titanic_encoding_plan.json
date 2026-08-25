@@ -1,0 +1,42 @@
+{
+  "plan_type": "encoding",
+  "schema_version": 1,
+  "created_at": "2026-08-25T22:03:04",
+  "payload": {
+    "cardinality_threshold": 10,
+    "suggestions": [
+      {
+        "column": "Sex",
+        "current_type": "categorical",
+        "suggested_type": "boolean (0/1)",
+        "strategy": "binary_encode",
+        "cardinality": 2,
+        "rationale": "two distinct values: binary encode",
+        "categories": [
+          "female",
+          "male"
+        ],
+        "target_means": {},
+        "mapping": {
+          "female": 0,
+          "male": 1
+        }
+      },
+      {
+        "column": "Embarked",
+        "current_type": "categorical",
+        "suggested_type": "one-hot (dummy) columns",
+        "strategy": "one_hot",
+        "cardinality": 3,
+        "rationale": "low-cardinality categorical (k=3)",
+        "categories": [
+          "C",
+          "Q",
+          "S"
+        ],
+        "target_means": {},
+        "mapping": null
+      }
+    ]
+  }
+}
