@@ -4,17 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "se-dat"
-version = "0.1.4"
+version = "0.1.5"
 description = "Simple Exploratory Data Analysis tool: column profiling, correlation analysis, and encoding suggestions."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Haim Feldman", email = "haimfeld@gmail.com" }]
 keywords = ["eda", "data-analysis", "pandas", "correlation", "encoding"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: MIT License",
@@ -39,7 +37,7 @@ where = ["src"]
 testpaths = ["tests"]
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py311"
 line-length = 120
 
 [tool.ruff.lint]

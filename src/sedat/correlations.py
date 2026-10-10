@@ -67,7 +67,9 @@ def _categorical_df(df: pd.DataFrame) -> pd.DataFrame:
         if (
             pd.api.types.is_bool_dtype(dtype)
             or isinstance(dtype, pd.CategoricalDtype)
-            or dtype is object
+            # ``dtype is object`` is always False (object is the builtin type,
+            # not the dtype); on pandas < 3 plain text columns are object dtype.
+            or pd.api.types.is_object_dtype(dtype)
             or isinstance(dtype, pd.StringDtype)
         ):
             picked.append(col)
@@ -152,7 +154,7 @@ def categorical_correlation(df: pd.DataFrame, n_jobs: int | None = None, progres
 
     values = _map(_pair, pairs, n_jobs, progress)
     mat = pd.DataFrame(index=cols, columns=cols, dtype=float)
-    for (a, b), v in zip(pairs, values):
+    for (a, b), v in zip(pairs, values, strict=True):
         mat.loc[a, b] = v
         mat.loc[b, a] = v
     for col in cols:
@@ -365,7 +367,7 @@ class CorrelationReport:
             )
         rows = []
         for (a, b, kind), group in s.groupby(["column_a", "column_b", "kind"], sort=False):
-            values = "; ".join(f"{m}={v}" for m, v in zip(group["method"], group["value"]))
+            values = "; ".join(f"{m}={v}" for m, v in zip(group["method"], group["value"], strict=True))
             rows.append(
                 {
                     "column_a": a,
