@@ -95,6 +95,9 @@ def infer_column_type(series: pd.Series) -> dict[str, Any]:
     notes: list[str] = []
     inferred_type: str
     confidence: str = "high"
+    is_constant = stats["n_non_null"] > 0 and stats["n_unique"] == 1
+    if is_constant:
+        notes.append("constant column (zero variance)")
 
     if isinstance(series.dtype, pd.CategoricalDtype):
         inferred_type = "categorical"
@@ -145,4 +148,10 @@ def infer_column_type(series: pd.Series) -> dict[str, Any]:
             else:
                 inferred_type = "categorical"
 
-    return {**stats, "inferred_type": inferred_type, "confidence": confidence, "notes": notes}
+    return {
+        **stats,
+        "inferred_type": inferred_type,
+        "confidence": confidence,
+        "notes": notes,
+        "is_constant": is_constant,
+    }

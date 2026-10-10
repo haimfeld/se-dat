@@ -88,14 +88,31 @@ def render_html(report: EDAReport) -> str:
     meta = (
         f'<p class="meta">se-dat {_escape(__version__)} &middot; '
         f"generated {_escape(generated)} &middot; "
-        f"{n_rows} rows &times; {n_cols} columns</p>"
+        f"{n_rows} rows &times; {n_cols} columns"
+        + (f" &middot; correlations on {report.n_rows_analyzed}-row sample" if report.sampled else "")
+        + "</p>"
     )
     title = f"se-dat EDA report &mdash; {_escape(n_cols)} columns"
 
     sections = [
         _section("Column profile", _df_table(report.profile.summary, index=True)),
         _section("Outliers", _df_table(report.outliers.summary)),
-        _section("Correlations", _df_table(flagged)),
+    ]
+    if report.plausibility.has_violations:
+        sections.append(_section("Plausibility checks", _df_table(report.plausibility_summary)))
+    if report.target_analysis is not None:
+        body = _df_table(report.target_summary)
+        if report.leakage_features:
+            body += '<p class="empty">⚠ Potential target leakage in: '
+            body += ", ".join(_escape(c) for c in report.leakage_features) + "</p>"
+        sections.append(_section(f"Target analysis — {_escape(report.target_analysis.target_name)}", body))
+    sections.append(_section("Correlations", _df_table(flagged)))
+    if not corr.vif.empty:
+        vif_body = _df_table(corr.vif)
+        if not pd.isna(corr.condition_number_value):
+            vif_body += f'<p class="meta">Condition number: {corr.condition_number_value:.3f}</p>'
+        sections.append(_section("Collinearity (VIF)", vif_body))
+    sections += [
         _heatmap_img(corr.numeric, "Pearson correlation (numeric)"),
         _heatmap_img(corr.numeric_spearman, "Spearman correlation (numeric)"),
         _heatmap_img(corr.categorical, "Cramér's V (categorical)"),
@@ -103,6 +120,7 @@ def render_html(report: EDAReport) -> str:
             corr.numeric_categorical,
             "Correlation ratio η (numeric vs categorical)",
         ),
+        _section("Transform suggestions", _df_table(report.transform_summary)),
         _section("Encoding suggestions", _df_table(report.encoding_summary)),
         _section("Imputation suggestions", _df_table(report.imputation_summary)),
     ]
