@@ -21,7 +21,7 @@ from typing import Any
 
 import pandas as pd
 
-from .profile import profile_dataframe
+from .profile import DataFrameProfile, profile_dataframe
 
 MEDIAN_STRATEGY = "median"
 MEAN_STRATEGY = "mean"
@@ -108,6 +108,7 @@ def _mode_value(series: pd.Series) -> Any:
 def suggest_imputations(
     df: pd.DataFrame,
     missing_threshold: float = DEFAULT_MISSING_THRESHOLD,
+    profile: DataFrameProfile | None = None,
 ) -> ImputationPlan:
     """Build an :class:`ImputationPlan` with one suggestion per incomplete column.
 
@@ -118,8 +119,11 @@ def suggest_imputations(
     missing_threshold:
         Columns with a missing percentage strictly above this value are
         suggested for dropping instead of imputation.
+    profile:
+        Reuse an existing :class:`DataFrameProfile` of ``df`` when available so
+        wide frames are not re-profiled on every plan.
     """
-    profile = profile_dataframe(df)
+    profile = profile or profile_dataframe(df)
     suggestions: list[ImputationSuggestion] = []
 
     for col_profile in profile.columns:

@@ -49,11 +49,12 @@ def test_html_contains_all_sections(tmp_path):
     for heading in (
         "Column profile",
         "Outliers",
-        "Correlations",
+        "Transform suggestions",
         "Encoding suggestions",
         "Imputation suggestions",
     ):
         assert f"<h2>{heading}</h2>" in content
+    assert "<h2>Correlations" in content
 
     # profile table content
     assert "inferred_type" in content

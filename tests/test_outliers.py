@@ -71,7 +71,7 @@ def test_indices_are_dataframe_labels_not_positions():
 
 def test_invalid_method_raises():
     with pytest.raises(ValueError, match="Unknown method"):
-        detect_outliers(make_df(), method="mad")
+        detect_outliers(make_df(), method="boxplot")
 
 
 def test_custom_thresholds_change_results():

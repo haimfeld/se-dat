@@ -97,6 +97,39 @@ def test_eta_range():
     assert np.isnan(v) or 0.0 <= v <= 1.0
 
 
+def test_vectorised_correlation_matrices_match_pairwise():
+    from sedat.correlations import correlation_ratio, cramers_v
+
+    rng = np.random.default_rng(0)
+    df = pd.DataFrame(
+        {
+            "num_a": rng.normal(size=200),
+            "num_b": rng.normal(size=200),
+            "cat_a": rng.choice(["x", "y", "z"], 200),
+            "cat_b": rng.choice(["p", "q"], 200),
+        }
+    )
+    df.loc[df.index[:5], "num_a"] = np.nan
+    df.loc[df.index[5:10], "cat_a"] = np.nan
+
+    cramers = sedat.categorical_correlation(df)
+    for a in ("cat_a", "cat_b"):
+        for b in ("cat_a", "cat_b"):
+            if a == b:
+                assert cramers.loc[a, a] == 1.0
+                continue
+            expected = cramers_v(df[a], df[b])
+            got = cramers.loc[a, b]
+            assert (np.isnan(expected) and np.isnan(got)) or got == pytest.approx(expected)
+
+    eta = sedat.numeric_categorical_correlation(df)
+    for num in ("num_a", "num_b"):
+        for cat in ("cat_a", "cat_b"):
+            expected = correlation_ratio(df[num], df[cat])
+            got = eta.loc[num, cat]
+            assert (np.isnan(expected) and np.isnan(got)) or got == pytest.approx(expected, abs=1e-9)
+
+
 def test_correlation_report_flags():
     df = make_df()
     df2 = df.copy()

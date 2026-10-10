@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 
-from .profile import profile_dataframe
+from .profile import DataFrameProfile, profile_dataframe
 from .types import binary_mapping
 
 BINARY_STRATEGY = "binary_encode"
@@ -105,11 +105,28 @@ class EncodingPlan:
     def apply(self, df: pd.DataFrame) -> pd.DataFrame:
         return self.apply_all(df)
 
-    def apply_all(self, df: pd.DataFrame, target: pd.Series | None = None) -> pd.DataFrame:
+    def apply_all(
+        self,
+        df: pd.DataFrame,
+        target: pd.Series | None = None,
+        warn_target_leakage: bool = True,
+    ) -> pd.DataFrame:
         result = df.copy()
-        tgt = target if target is not None else self.target
+        if warn_target_leakage and (target is not None or self.target is not None):
+            leaky = [s.column for s in self.suggestions if s.strategy == TARGET_STRATEGY]
+            if leaky:
+                _warn(
+                    "Target encoding is being fit on the data passed to apply_all "
+                    f"(column(s): {', '.join(leaky)}). This leaks the target into the "
+                    "features and inflates downstream scores. Fit the plan on a training "
+                    "frame, save it, and apply the loaded plan to held-out data instead "
+                    "(or pass warn_target_leakage=False to silence this)."
+                )
         for suggestion in self.suggestions:
-            result = suggestion.apply(result, target=tgt)
+            # Only an explicitly passed target recomputes per-category means;
+            # otherwise the means captured at suggest time are reused, which is
+            # what makes a saved (or sampled) plan reproducible on new frames.
+            result = suggestion.apply(result, target=target)
         return result
 
     def to_column_transformer(self):
@@ -137,6 +154,7 @@ def suggest_encodings(
     df: pd.DataFrame,
     target: pd.Series | None = None,
     cardinality_threshold: int = DEFAULT_CARDINALITY_THRESHOLD,
+    profile: DataFrameProfile | None = None,
 ) -> EncodingPlan:
     """Build an :class:`EncodingPlan` of encoding suggestions for ``df``.
 
@@ -150,12 +168,17 @@ def suggest_encodings(
     cardinality_threshold:
         Categoricals with at most this many distinct values get a one-hot
         suggestion; above it they get target/ordinal encoding.
+    profile:
+        Reuse an existing :class:`DataFrameProfile` of ``df`` when available so
+        wide frames are not re-profiled on every plan.
     """
-    profile = profile_dataframe(df)
+    profile = profile or profile_dataframe(df)
     suggestions: list[EncodingSuggestion] = []
 
     for col_profile in profile.columns:
         col = col_profile.name
+        if target is not None and col == target.name:
+            continue  # never suggest encoding the target itself
         series = df[col]
         cardinality = col_profile.n_unique
         current_type = col_profile.inferred_type

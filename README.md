@@ -41,28 +41,44 @@ pip install -e ".[dev]"
 
 1. **Column type profiling** — per column: inferred type (`numeric`, `boolean`,
    `categorical`, `string`, `datetime`, `id`), missing %, unique count,
-   cardinality ratio, and a confidence flag when the inference is ambiguous
-   (numeric-looking strings, `0/1` vs `yes`/`no` booleans, etc.).
+   cardinality ratio, a confidence flag when the inference is ambiguous
+   (numeric-looking strings, `0/1` vs `yes`/`no` booleans, etc.), and flags for
+   constant columns and full-row duplicates.
 2. **Correlation analysis** — Pearson/Spearman matrices + heatmap
    (numeric-numeric), Cramér's V (categorical-categorical), correlation ratio
-   eta (numeric-categorical), plus multicollinearity flags above a threshold.
-3. **Encoding suggestions + auto-transform** — detects binary-like strings
+   eta (numeric-categorical), pairwise multicollinearity flags, plus
+   variance-inflation factors and a condition number to catch multi-way
+   collinearity that pairwise checks miss.
+3. **Target analysis** — `analyze_target(df, target)` picks an effect size by
+   the target's inferred role (Pearson / point-biserial / eta / Cramér's V),
+   adds binning-based mutual information, returns a ranked feature table and
+   flags features that almost perfectly predict the target (leakage).
+4. **Encoding suggestions + auto-transform** — detects binary-like strings
    (`yes`/`no`, `true`/`false`, `0/1`), suggests one-hot for low-cardinality
    categoricals, and target/ordinal encoding for high-cardinality ones (with a
-   dimensionality warning). Apply suggestions individually or all at once.
-4. **Missing-value handling** — median for numeric columns, mode for
+   dimensionality warning). Fit-on-apply target encoding is warned against.
+5. **Missing-value handling** — median for numeric columns, mode for
    categorical-like ones, and drop-column suggestions past a configurable
    missing-percentage threshold.
-5. **Outlier detection** — IQR or z-score flags per numeric column with counts,
-   percentages and row indices, surfaced directly in the profile summary.
-6. **HTML report export** — a static, self-contained page (tables + embedded
-   heatmap images) from a single call.
-7. **scikit-learn interop** — convert an encoding plan into a native
-   `ColumnTransformer`.
-8. **Datetime feature extraction** — year/month/day/day-of-week/weekend/hour
-   suggestions for detected datetime columns.
-9. **Reproducible plans** — every plan saves to and loads from JSON, keeping
-   train/test transforms consistent.
+6. **Outlier detection** — IQR, z-score, modified z-score (`mad`) or `log_iqr`
+   flags per numeric column with counts, percentages and row indices, surfaced
+   directly in the profile summary.
+7. **Plausibility checks** — opt-in range rules, `non_negative` / `percentages`
+   shorthands and value whitelists, reported per column.
+8. **Transform suggestions** — `log1p` or Box-Cox for skewed columns, with
+   round-trip inverses so features can be un-transformed after modelling.
+9. **Data dictionary** — declarative column types, ranges, derived columns and
+   target marking from a dict, JSON or CSV, driving the whole pipeline.
+10. **HTML report export** — a static, self-contained page (tables + embedded
+    heatmap images) from a single call.
+11. **scikit-learn interop** — convert an encoding plan into a native
+    `ColumnTransformer`.
+12. **Datetime feature extraction** — year/month/day/day-of-week/weekend/hour
+    suggestions for detected datetime columns.
+13. **Reproducible plans** — every plan saves to and loads from JSON, keeping
+    train/test transforms consistent.
+14. **Scalability** — `sample=` / `max_columns=` caps, a `fast=True` preset and
+    parallel correlation loops (`n_jobs`, `progress`) for large frames.
 
 ## Usage
 
@@ -123,7 +139,7 @@ than inventing data.
 ### Outlier detection
 
 ```python
-outliers = sedat.detect_outliers(df, method="iqr")     # or method="zscore"
+outliers = sedat.detect_outliers(df, method="iqr")   # or "zscore" | "mad" | "log_iqr"
 outliers.summary                                       # count/%/bounds per column
 fare = outliers.get("fare")
 df.loc[fare.indices, ["fare"]]                         # flagged rows
@@ -131,6 +147,9 @@ df.loc[fare.indices, ["fare"]]                         # flagged rows
 # also surfaced automatically inside the profile table:
 report.profile.summary["outliers"]                     # "fare: 12 potential outliers (2.4%)"
 ```
+
+`mad` uses a median-based modified z-score (robust to skew, threshold 3.5);
+`log_iqr` detects outliers on log-scaled positive-skewed values first.
 
 ### HTML reports
 
@@ -179,6 +198,86 @@ test_encoded = loaded.apply_all(test_df)      # stable schema; unseen values -> 
 Plans serialize their decisions (categories, fill values, code mappings), not
 function references, so transforms stay identical between training and test
 runs — including one-hot schemas when a category is absent from the test data.
+
+### Target analysis & leakage detection
+
+```python
+analysis = sedat.analyze_target(df, target=df["target"], warn=True)
+analysis.summary                 # ranked effect size + MI per feature
+analysis.leakage_features        # e.g. ['customer_id'] if it predicts the target
+```
+
+Receive the same analysis on any report that was created with a target:
+
+```python
+report = sedat.EDAReport.create(df, target=df["target"])
+report.target_summary            # ranked table against the chosen target
+report.leakage_features          # potentially leaking features, if any
+```
+
+Effect sizes are chosen from the target's inferred role (Pearson for numeric,
+point-biserial for binary, η / Cramér's V for categorical). Effect size *or*
+normalised mutual information meeting the `leakage_threshold` (default 0.98)
+flags a feature as leakage. High-cardinality text and Id-like columns are
+bucketed so they never look like perfect predictors.
+
+### Data dictionaries
+
+```python
+dictionary = sedat.DataDictionary.load("dictionary.json")
+report = sedat.EDAReport.create(df, dictionary=dictionary)
+```
+
+A dictionary (dict mapping, JSON file or CSV) can set each column's semantic
+`type`, its `min`/`max` (or `allowed`) ranges for plausibility checks, mark
+derived columns and designate the `target`. The data dictionary drives type
+identification, range checks and target handling in one place, and its entries
+show up as notes in the profile.
+
+### Plausibility checks
+
+```python
+report = sedat.EDAReport.create(
+    df, range_rules={"age": (0, 120), "segment": {"allowed": ["a", "b", "c"]}},
+    non_negative=["count"], percentages=["completion_pct"],
+)
+report.plausibility_summary      # column / range / n_violations per constraint
+```
+
+### Transform suggestions
+
+```python
+plan = sedat.suggest_transforms(df)
+plan.summary                     # column -> log1p / box_cox, with skew before/after
+transformed = plan.apply_all(df)
+back = plan.inverse(transformed) # round-trips to the original scale
+```
+
+### Collinearity diagnostics
+
+```python
+sedat.variance_inflation_factors(df)   # VIF per numeric column (multi-way)
+sedat.condition_number(df)             # design-matrix condition number
+report.vif_summary                     # same, via the report
+```
+
+VIF is skipped when there are more than `max_vif_features` (default 50) numeric
+columns; correlation-ratio η returns NaN for degenerate groups instead of a
+false "perfect" score.
+
+### Scalability
+
+```python
+report = sedat.EDAReport.create(df, target=df["target"], fast=True)
+#     -> profile on a seeded 50k-row sample, correlations capped at 100 columns,
+#        VIF skipped; the full frame is still used to apply encoding plans.
+
+report = sedat.EDAReport.create(df, sample=20_000, max_columns=50,
+                                n_jobs=4, progress=True)
+```
+
+The analysis frame is sampled (default via `fast=True`), but every plan
+produced by the report is applied to the full frame you passed in.
 
 ## Development
 

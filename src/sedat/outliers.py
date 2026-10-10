@@ -1,10 +1,13 @@
 """Outlier detection for numeric columns.
 
-Two methods are supported:
+Four methods are supported:
 
 - ``"iqr"``: values outside ``[Q1 - k * IQR, Q3 + k * IQR]`` (k default 1.5)
-- ``"zscore"``: values whose absolute z-score exceeds a threshold
-  (default 3.0)
+- ``"zscore"``: values whose absolute z-score exceeds a threshold (default 3.0)
+- ``"mad"``: modified z-score ``0.6745 * |x - median| / MAD`` above a threshold
+  (default 3.5); robust on skewed data where standard deviation is inflated
+- ``"log_iqr"``: IQR applied to a ``log1p``-transformed series, for
+  right-skewed / heavy-tailed columns (e.g. income or spend)
 
 Missing values are ignored: they never count as outliers and are excluded
 from the denominators of the reported percentages.
@@ -21,9 +24,15 @@ import pandas as pd
 
 IQR_METHOD = "iqr"
 ZSCORE_METHOD = "zscore"
+MAD_METHOD = "mad"
+LOG_IQR_METHOD = "log_iqr"
+
+METHODS = (IQR_METHOD, ZSCORE_METHOD, MAD_METHOD, LOG_IQR_METHOD)
 
 DEFAULT_IQR_SCALE = 1.5
 DEFAULT_Z_THRESHOLD = 3.0
+DEFAULT_MAD_THRESHOLD = 3.5
+_MAD_SCALE = 0.6745
 
 
 def outlier_note(result: ColumnOutliers) -> str:
@@ -99,11 +108,33 @@ def _detect_zscore(series: pd.Series, threshold: float) -> tuple[np.ndarray, flo
     return mask, None, None
 
 
+def _detect_mad(series: pd.Series, threshold: float) -> tuple[np.ndarray, float | None, float | None]:
+    median = float(series.median())
+    mad = float(np.median(np.abs(series - median)))
+    if mad == 0 or np.isnan(mad):
+        return np.zeros(len(series), dtype=bool), None, None
+    modified_z = _MAD_SCALE * (series - median) / mad
+    mask = (modified_z.abs() > threshold).to_numpy()
+    half_width = threshold * mad / _MAD_SCALE
+    return mask, median - half_width, median + half_width
+
+
+def _detect_log_iqr(series: pd.Series, scale: float) -> tuple[np.ndarray, float | None, float | None]:
+    # shift so every value is >= 0 before log1p; bounds are mapped back
+    shift = float(-series.min() + 1.0) if series.min() < 0 else 0.0
+    logged = np.log1p(series + shift)
+    mask, lower_log, upper_log = _detect_iqr(logged, scale)
+    lower = None if lower_log is None else float(np.expm1(lower_log) - shift)
+    upper = None if upper_log is None else float(np.expm1(upper_log) - shift)
+    return mask, lower, upper
+
+
 def detect_outliers(
     df: pd.DataFrame,
     method: str = IQR_METHOD,
     iqr_scale: float = DEFAULT_IQR_SCALE,
     z_threshold: float = DEFAULT_Z_THRESHOLD,
+    mad_threshold: float = DEFAULT_MAD_THRESHOLD,
 ) -> OutlierReport:
     """Detect outliers in every numeric column of ``df``.
 
@@ -112,16 +143,18 @@ def detect_outliers(
     df:
         Input DataFrame; non-numeric columns are skipped.
     method:
-        ``"iqr"`` (default) or ``"zscore"``.
+        ``"iqr"`` (default), ``"zscore"``, ``"mad"`` or ``"log_iqr"``.
     iqr_scale:
-        Multiplier ``k`` on the interquartile range (IQR method).
+        Multiplier ``k`` on the interquartile range (IQR and log-IQR methods).
     z_threshold:
         Absolute z-score cutoff (z-score method).
+    mad_threshold:
+        Modified z-score cutoff (MAD method).
 
     Percentages are computed over non-null values.
     """
-    if method not in (IQR_METHOD, ZSCORE_METHOD):
-        raise ValueError(f"Unknown method '{method}'. Expected one of: {IQR_METHOD}, {ZSCORE_METHOD}")
+    if method not in METHODS:
+        raise ValueError(f"Unknown method '{method}'. Expected one of: {', '.join(METHODS)}")
     num = df.select_dtypes(include=[np.number])
     results: list[ColumnOutliers] = []
     for col in num.columns:
@@ -132,8 +165,12 @@ def detect_outliers(
             continue
         if method == IQR_METHOD:
             mask, lower, upper = _detect_iqr(series, iqr_scale)
-        else:
+        elif method == ZSCORE_METHOD:
             mask, lower, upper = _detect_zscore(series, z_threshold)
+        elif method == MAD_METHOD:
+            mask, lower, upper = _detect_mad(series, mad_threshold)
+        else:
+            mask, lower, upper = _detect_log_iqr(series, iqr_scale)
         count = int(mask.sum())
         results.append(
             ColumnOutliers(

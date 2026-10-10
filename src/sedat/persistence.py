@@ -31,6 +31,8 @@ from .encoding import EncodingPlan, EncodingSuggestion
 from .imputation import ImputationPlan, ImputationSuggestion
 
 PLAN_SCHEMA_VERSION = 1
+# Plans without a version predate versioning and are schema v1.
+DEFAULT_SCHEMA_VERSION = 1
 
 ENCODING_PLAN_TYPE = "encoding"
 IMPUTATION_PLAN_TYPE = "imputation"
@@ -177,15 +179,35 @@ _PLAN_TYPES = {
 }
 
 
+def _schema_version(envelope: dict[str, Any]) -> int:
+    """Read the envelope's schema version, tolerating pre-versioning plans."""
+    raw = envelope.get("schema_version", DEFAULT_SCHEMA_VERSION)
+    if raw is None:
+        return DEFAULT_SCHEMA_VERSION
+    try:
+        version = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Invalid plan schema_version {raw!r}") from exc
+    if version > PLAN_SCHEMA_VERSION:
+        raise ValueError(
+            f"Plan schema version {version} is newer than this se-dat supports "
+            f"({PLAN_SCHEMA_VERSION}); upgrade se-dat to load it."
+        )
+    return version
+
+
 def save_plan(plan, path: str) -> str:
     """Serialize ``plan`` to ``path`` as JSON; returns the path."""
     plan_type = _PLAN_TYPES.get(type(plan))
     if plan_type is None:
         raise TypeError(f"Cannot save object of type {type(plan).__name__}")
     to_dict, _ = _SERIALIZERS[plan_type]
+    from . import __version__
+
     envelope = {
         "plan_type": plan_type,
         "schema_version": PLAN_SCHEMA_VERSION,
+        "se_dat_version": __version__,
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "payload": to_dict(plan),
     }
@@ -195,12 +217,18 @@ def save_plan(plan, path: str) -> str:
 
 
 def load_plan(path: str):
-    """Deserialize a plan saved by :func:`save_plan`."""
+    """Deserialize a plan saved by :func:`save_plan`.
+
+    Plans written before schema versioning (no ``schema_version`` key) load as
+    v1; plans written by a newer se-dat raise a clear error instead of silently
+    mis-parsing.
+    """
     with open(path, encoding="utf-8") as fh:
         envelope = json.load(fh)
     plan_type = envelope.get("plan_type")
     if plan_type not in _SERIALIZERS:
         raise ValueError(f"Unknown plan type '{plan_type}'. Expected one of: {sorted(_SERIALIZERS)}")
+    _schema_version(envelope)
     _, from_dict = _SERIALIZERS[plan_type]
     return from_dict(envelope.get("payload", {}))
 
