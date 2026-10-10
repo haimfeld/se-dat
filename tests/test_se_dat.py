@@ -88,6 +88,25 @@ def test_cramers_v_range():
         assert np.isnan(v) or 0.0 <= v <= 1.0
 
 
+def test_object_dtype_columns_are_treated_as_categorical():
+    # On pandas < 3 plain text columns are object dtype; they must still be
+    # picked up by the categorical correlation helpers.
+    df = pd.DataFrame(
+        {
+            "num": pd.Series([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
+            "cat_a": pd.Series(["x", "y", "x", "y", "x", "y"], dtype=object),
+            "cat_b": pd.Series(["u", "u", "v", "v", "u", "v"], dtype=object),
+        }
+    )
+    cramers = sedat.categorical_correlation(df)
+    assert {"cat_a", "cat_b"} <= set(cramers.columns)
+    assert cramers.loc["cat_a", "cat_b"] == cramers.loc["cat_b", "cat_a"]
+
+    eta = sedat.numeric_categorical_correlation(df)
+    assert {"cat_a", "cat_b"} <= set(eta.columns)
+    assert "num" in eta.index
+
+
 def test_eta_range():
     df = make_df()
     mat = sedat.numeric_categorical_correlation(df)
